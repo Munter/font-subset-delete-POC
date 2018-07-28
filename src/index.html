@@ -5,18 +5,9 @@
   <title>Document</title>
 
   <style>
-    /* roboto-regular - latin */
-    @font-face {
-      font-family: 'Roboto';
-      font-style: normal;
-      font-weight: 400;
-      src: local('Roboto'), local('Roboto-Regular'),
-           url('fonts/roboto-v18-latin-regular.woff2') format('woff2'), /* Chrome 26+, Opera 23+, Firefox 39+ */
-           url('fonts/roboto-v18-latin-regular.woff') format('woff'); /* Chrome 6+, Firefox 3.6+, IE 9+, Safari 5.1+ */
-    }
     /* roboto-700 - latin */
     @font-face {
-      font-family: 'Roboto';
+      font-family: Roboto;
       font-style: normal;
       font-weight: 700;
       src: local('Roboto Bold'), local('Roboto-Bold'),
@@ -29,6 +20,46 @@
     }
   </style>
 
+  <script>
+    var fontProps = ['font-family', 'font-weight', 'font-style'];
+
+    function findMatchingSubsetFontFaceDelaration(originalFontFace) {
+      for (var stylesheet of [...document.styleSheets]) {
+        for (var [idx, rule] of [...stylesheet.cssRules].entries()) {
+          if (rule.type === rule.FONT_FACE_RULE) {
+            var props = {};
+
+            for (var prop of fontProps) {
+              props[prop.replace('font-', '')] = rule.style.getPropertyValue(prop) || 'normal';
+            }
+
+            var strippedFamily = originalFontFace.family.replace(/^["']|["']$/g, '');
+
+            if (props.family === strippedFamily + '__subset' && props.weight === originalFontFace.weight && props.style === originalFontFace.style) {
+              return function removeSubset() {
+                console.log('deleting', rule);
+                stylesheet.deleteRule(idx);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (document.fonts) {
+      document.fonts.forEach(function (fontFace) {
+        if (!fontFace.family.endsWith('__subset')) {
+          fontFace.loaded.then(function () {
+            var removeSubset = findMatchingSubsetFontFaceDelaration(fontFace);
+            if (removeSubset) {
+              removeSubset();
+            }
+          });
+        }
+      });
+    }
+  </script>
+
 
 </head>
 <body>
@@ -36,8 +67,8 @@
 
   <script>
 
-    setTimeout(() => {
-      const h1 = document.querySelector('h1');
+    setTimeout(function () {
+      var h1 = document.querySelector('h1');
 
       h1.innerText = h1.innerText.split('').join('V');
     }, 2000);
